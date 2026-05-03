@@ -2,7 +2,7 @@
 
 **Lilium Arena** is an engine and game-logic compatible with Quake III Arena 1.32.
 
-The goal is to maintain the original Quake 3 gameplay, visuals, and audio experience while also providing a reliable code base for derivative projects and support for many platforms.
+The goal is to maintain the original Quake 3 gameplay, visuals, and audio experience while also providing a reliable code base for derivative projects and continued support for Windows XP+, macOS 10.5+, and GNU/Linux.
 
 
 ## Features
@@ -57,9 +57,9 @@ cl_flexibleDisplay 1; con_native 0; r_allowResize 1; vid_restart;
 
 Lilium Arena is the base project for various Quake 3 projects maintained under Clover.moe, such as Spearmint. It is based on the Quake 3 GPL source code by id Software that was further developed in ioquake3.
 
-zturtleman contributed to ioquake3 from 2010 to 2025. Lilium Arena is a continuation of his vision for a Quake 3 1.32 engine with unfettered control of the project direction. Changes from ioquake3 may be selectively integrated.
+zturtleman began developing a project on ioquake3 in 2008 and contributed to ioquake3 from 2010 to 2025. Lilium Arena is a continuation of his vision for a Quake 3 1.32 engine. Changes from ioquake3 may be selectively integrated.
 
-Lilium Arena was established in 2021 with the intention of providing releases of a lightly modified ioquake3 to better match zturtleman's vision and to be the base for Lilium Arena Classic. In October 2025, zturtleman moved his primary development for Quake 3 1.32 to Lilium Arena and made it the base for all Quake 3 projects under Clover.moe.
+Lilium Arena was established in 2021 with the intention of providing releases of a lightly modified ioquake3 to better match zturtleman's vision and to be the base for Lilium Arena Classic. In October 2025, zturtleman moved his primary development for Quake 3 1.32 to Lilium Arena and made it the base for all Quake 3 projects under Clover.moe. A vision for a series of engines under the title "Lilium" began in 2014 with Lilium Voyager.
 
 
 ## License
@@ -80,14 +80,14 @@ Lilium Arena is compiled using GNU Make (`make`) and requires a C compiler. Most
 
 ## Contributing
 
-High quality code contributions are more helpful than rushed contributions.
+High quality code contributions are more helpful than rushed contributions. LLM ("AI") contributions are not desired.
 
 Reviewing pull requests is sometimes more work than a reviewer doing the work in the first place so pull requests may be disregarded.
 
 
 ## Credits
 
-Lilium Arena is maintained by Clover.moe.
+Lilium Arena is maintained by Clover.moe at https://github.com/clover-moe/lilium-arena.
 
 ### id Software
 
@@ -115,5 +115,12 @@ Lilium Arena is maintained by Clover.moe.
 ### Clover.moe
 
   * Zack Middleton (zturtleman)
+
+
+## Derivatives
+
+If you create a derivative project that you plan for others to use, it would be preferred to give it a different title such as "Lilium Arena (_your name_ ver.)" to make it easier to discuss and reduce confusion with the project maintained by Clover.moe.
+
+If you're going to pick a different title, it would be preferred that you pick a different song title to build on rather than use the word Lilium. (Lilium is the title of the opening song of the 2004 anime series Elfen Lied.)
 
 
