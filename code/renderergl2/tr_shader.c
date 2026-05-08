@@ -2608,6 +2608,7 @@ static int CollapseStagesToGLSL(void)
 				case AGEN_PORTAL:
 					continue;
 				default:
+					break;
 			}
 
 			if (pStage->bundle[TB_DIFFUSEMAP].tcGen != TCGEN_LIGHTMAP)
@@ -2649,6 +2650,7 @@ static int CollapseStagesToGLSL(void)
 				case AGEN_PORTAL:
 					continue;
 				default:
+					break;
 			}
 
 			if (pStage->rgbGen == CGEN_LIGHTING_DIFFUSE)
