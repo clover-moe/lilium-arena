@@ -130,6 +130,12 @@ static struct sockaddr_in6 boundto;
 // use an admin local address per default so that network admins can decide on how to handle quake3 traffic.
 #define NET_MULTICAST_IP6 "ff04::696f:7175:616b:6533"
 
+typedef struct {
+	qboolean ip;
+	qboolean ip6;
+	qboolean multicast6;
+} netsocks_t;
+
 #define	MAX_IPS		32
 
 typedef struct
@@ -520,14 +526,14 @@ NET_GetPacket
 Receive one packet
 ==================
 */
-qboolean NET_GetPacket(netadr_t *net_from, msg_t *net_message, fd_set *fdr)
+qboolean NET_GetPacket(netadr_t *net_from, msg_t *net_message, netsocks_t *readsocks)
 {
 	int 	ret;
 	struct sockaddr_storage from;
 	socklen_t	fromlen;
 	int		err;
 	
-	if(ip_socket != INVALID_SOCKET && FD_ISSET(ip_socket, fdr))
+	if(ip_socket != INVALID_SOCKET && readsocks->ip)
 	{
 		fromlen = sizeof(from);
 		ret = recvfrom( ip_socket, (void *)net_message->data, net_message->maxsize, 0, (struct sockaddr *) &from, &fromlen );
@@ -571,7 +577,7 @@ qboolean NET_GetPacket(netadr_t *net_from, msg_t *net_message, fd_set *fdr)
 		}
 	}
 	
-	if(ip6_socket != INVALID_SOCKET && FD_ISSET(ip6_socket, fdr))
+	if(ip6_socket != INVALID_SOCKET && readsocks->ip6)
 	{
 		fromlen = sizeof(from);
 		ret = recvfrom(ip6_socket, (void *)net_message->data, net_message->maxsize, 0, (struct sockaddr *) &from, &fromlen);
@@ -599,7 +605,7 @@ qboolean NET_GetPacket(netadr_t *net_from, msg_t *net_message, fd_set *fdr)
 		}
 	}
 
-	if(multicast6_socket != INVALID_SOCKET && multicast6_socket != ip6_socket && FD_ISSET(multicast6_socket, fdr))
+	if(multicast6_socket != INVALID_SOCKET && multicast6_socket != ip6_socket && readsocks->multicast6)
 	{
 		fromlen = sizeof(from);
 		ret = recvfrom(multicast6_socket, (void *)net_message->data, net_message->maxsize, 0, (struct sockaddr *) &from, &fromlen);
@@ -830,6 +836,14 @@ SOCKET NET_IPSocket( char *net_interface, int port, int *err ) {
 		Com_Printf( "WARNING: NET_IPSocket: socket: %s\n", NET_ErrorString() );
 		return newsocket;
 	}
+
+#ifndef _WIN32
+	// warn if cannot use with select()
+	if ( newsocket >= FD_SETSIZE ) {
+		Com_Printf( "WARNING: NET_IPSocket: socket fd %d exceeds FD_SETSIZE (%d)\n", newsocket, FD_SETSIZE);
+	}
+#endif
+
 	// make it non-blocking
 	if( ioctlsocket( newsocket, FIONBIO, &_true ) == SOCKET_ERROR ) {
 		Com_Printf( "WARNING: NET_IPSocket: ioctl FIONBIO: %s\n", NET_ErrorString() );
@@ -901,6 +915,13 @@ SOCKET NET_IP6Socket( char *net_interface, int port, struct sockaddr_in6 *bindto
 		Com_Printf( "WARNING: NET_IP6Socket: socket: %s\n", NET_ErrorString() );
 		return newsocket;
 	}
+
+#ifndef _WIN32
+	// warn if cannot use with select()
+	if ( newsocket >= FD_SETSIZE ) {
+		Com_Printf( "WARNING: NET_IP6Socket: socket fd %d exceeds FD_SETSIZE (%d)\n", newsocket, FD_SETSIZE);
+	}
+#endif
 
 	// make it non-blocking
 	if( ioctlsocket( newsocket, FIONBIO, &_true ) == SOCKET_ERROR ) {
@@ -1616,7 +1637,7 @@ Called from NET_Sleep which uses select() to determine which sockets have seen a
 ====================
 */
 
-void NET_Event(fd_set *fdr)
+void NET_Event(netsocks_t *readsocks)
 {
 	byte bufData[MAX_MSGLEN + 1];
 	netadr_t from = {0};
@@ -1626,7 +1647,7 @@ void NET_Event(fd_set *fdr)
 	{
 		MSG_Init(&netmsg, bufData, sizeof(bufData));
 
-		if(NET_GetPacket(&from, &netmsg, fdr))
+		if(NET_GetPacket(&from, &netmsg, readsocks))
 		{
 			if(net_dropsim->value > 0.0f && net_dropsim->value <= 100.0f)
 			{
@@ -1658,9 +1679,28 @@ void NET_Sleep(int msec)
 	fd_set fdr;
 	int retval;
 	SOCKET highestfd = INVALID_SOCKET;
+	netsocks_t readsocks;
 
 	if(msec < 0)
 		msec = 0;
+
+#ifndef _WIN32
+	// use the slow way if socket isn't valid for FD_SET()
+	if ((ip_socket != INVALID_SOCKET && ip_socket >= FD_SETSIZE)
+		|| (ip6_socket != INVALID_SOCKET && ip6_socket >= FD_SETSIZE)
+		|| (multicast6_socket != INVALID_SOCKET && multicast6_socket >= FD_SETSIZE))
+	{
+		Sys_Sleep( msec );
+
+		memset( &readsocks, 0, sizeof(readsocks));
+		readsocks.ip = (ip_socket != INVALID_SOCKET);
+		readsocks.ip6 = (ip6_socket != INVALID_SOCKET);
+		readsocks.multicast6 = (multicast6_socket != INVALID_SOCKET && multicast6_socket != ip6_socket);
+
+		NET_Event(&readsocks);
+		return;
+	}
+#endif
 
 	FD_ZERO(&fdr);
 
@@ -1700,9 +1740,24 @@ void NET_Sleep(int msec)
 	retval = select(highestfd + 1, &fdr, NULL, NULL, &timeout);
 
 	if(retval == SOCKET_ERROR)
+	{
 		Com_Printf("Warning: select() syscall failed: %s\n", NET_ErrorString());
+	}
 	else if(retval > 0)
-		NET_Event(&fdr);
+	{
+		memset( &readsocks, 0, sizeof( readsocks ) );
+		if(ip_socket != INVALID_SOCKET) {
+			readsocks.ip = FD_ISSET(ip_socket, &fdr);
+		}
+		if(ip6_socket != INVALID_SOCKET) {
+			readsocks.ip6 = FD_ISSET(ip6_socket, &fdr);
+		}
+		if(multicast6_socket != INVALID_SOCKET && multicast6_socket != ip6_socket) {
+			readsocks.multicast6 = FD_ISSET(multicast6_socket, &fdr);
+		}
+
+		NET_Event(&readsocks);
+	}
 }
 
 /*
